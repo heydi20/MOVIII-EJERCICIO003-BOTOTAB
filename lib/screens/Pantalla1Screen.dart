@@ -1,122 +1,183 @@
-// main.dart
-import 'package:ejercicio_botontab/screens/Inventario.dart';
-import 'package:ejercicio_botontab/screens/Producto.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(MaterialApp(
-    home: InventarioScreen(),
-  ));
+class Libro {
+  String titulo;
+  String autor;
+  int anioPublicacion;
+  int cantidadDisponible;
+
+  Libro({
+    required this.titulo,
+    required this.autor,
+    required this.anioPublicacion,
+    required this.cantidadDisponible,
+  });
 }
 
-class InventarioScreen extends StatefulWidget {
+class BibliotecaScreen extends StatefulWidget {
+  const BibliotecaScreen({Key? key}) : super(key: key);
+
   @override
-  State<InventarioScreen> createState() => _InventarioScreenState();
+  _BibliotecaScreenState createState() => _BibliotecaScreenState();
 }
 
-class _InventarioScreenState extends State<InventarioScreen> {
-  final inventario = Inventario();
+class _BibliotecaScreenState extends State<BibliotecaScreen> {
+  List<Libro> biblioteca = [];
 
-  final TextEditingController _nombreController = TextEditingController();
-  final TextEditingController _precioController = TextEditingController();
-  final TextEditingController _stockController = TextEditingController();
+  final _tituloController = TextEditingController();
+  final _autorController = TextEditingController();
+  final _anioController = TextEditingController();
+  final _cantidadController = TextEditingController();
+  final _buscarController = TextEditingController();
 
-  void _agregarProducto() {
-    final nombre = _nombreController.text;
-    final precio = double.tryParse(_precioController.text) ?? 0;
-    final stock = int.tryParse(_stockController.text) ?? 0;
+  List<Libro> resultadosBusqueda = [];
 
-    if (nombre.isNotEmpty && precio > 0 && stock >= 0) {
-      final nuevoProducto = Producto(nombre: nombre, precio: precio, stock: stock);
-      setState(() {
-        inventario.agregarProducto(nuevoProducto);
-      });
-
-      _nombreController.clear();
-      _precioController.clear();
-      _stockController.clear();
+  void agregarLibro() {
+    if (_tituloController.text.isEmpty ||
+        _autorController.text.isEmpty ||
+        _anioController.text.isEmpty ||
+        _cantidadController.text.isEmpty) {
+      return;
     }
+
+    setState(() {
+      biblioteca.add(Libro(
+        titulo: _tituloController.text,
+        autor: _autorController.text,
+        anioPublicacion: int.parse(_anioController.text),
+        cantidadDisponible: int.parse(_cantidadController.text),
+      ));
+
+      _tituloController.clear();
+      _autorController.clear();
+      _anioController.clear();
+      _cantidadController.clear();
+    });
   }
 
-  void _actualizarStock(int index, int nuevoStock) {
+  void buscarLibro() {
     setState(() {
-      inventario.productos[index].actualizarStock(nuevoStock);
+      resultadosBusqueda = biblioteca
+          .where((libro) => libro.titulo
+              .toLowerCase()
+              .contains(_buscarController.text.toLowerCase()))
+          .toList();
+
+      if (resultadosBusqueda.isEmpty) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title:  Text("Aviso"),
+            content:  Text("No se encontraron libros con ese título."),
+            actions: [
+              TextButton(
+                child:  Text("Aceptar"),
+                onPressed: () => Navigator.pop(context),
+              )
+            ],
+          ),
+        );
+      }
+    });
+  }
+
+  void limpiarBusqueda() {
+    setState(() {
+      _buscarController.clear();
+      resultadosBusqueda.clear();
     });
   }
 
   @override
+  void dispose() {
+    _tituloController.dispose();
+    _autorController.dispose();
+    _anioController.dispose();
+    _cantidadController.dispose();
+    _buscarController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    List<Libro> listaParaMostrar =
+        resultadosBusqueda.isNotEmpty || _buscarController.text.isNotEmpty
+            ? resultadosBusqueda
+            : biblioteca;
+
     return Scaffold(
-      appBar: AppBar(title: Text('Inventario de Productos')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      appBar: AppBar(title:  Text('Biblioteca')),
+      body: SingleChildScrollView(
+        padding:  EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Formulario
-            TextField(
-              controller: _nombreController,
-              decoration: InputDecoration(labelText: 'Nombre del producto'),
+             Text(
+              "Agregar libro",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             TextField(
-              controller: _precioController,
+              controller: _tituloController,
+              decoration:  InputDecoration(labelText: 'Título'),
+            ),
+            TextField(
+              controller: _autorController,
+              decoration:  InputDecoration(labelText: 'Autor'),
+            ),
+            TextField(
+              controller: _anioController,
+              decoration:  InputDecoration(labelText: 'Año de publicación'),
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: 'Precio'),
             ),
             TextField(
-              controller: _stockController,
+              controller: _cantidadController,
+              decoration:  InputDecoration(labelText: 'Cantidad disponible'),
               keyboardType: TextInputType.number,
-              decoration: InputDecoration(labelText: 'Stock'),
             ),
-            SizedBox(height: 10),
+             SizedBox(height: 10),
             ElevatedButton(
-              onPressed: _agregarProducto,
-              child: Text('Agregar producto'),
+              onPressed: agregarLibro,
+              child:  Text('Agregar'),
             ),
-            Divider(),
-            // Lista de productos
-            Expanded(
-              child: ListView.builder(
-                itemCount: inventario.productos.length,
-                itemBuilder: (context, index) {
-                  final p = inventario.productos[index];
-                  return ListTile(
-                    title: Text(p.nombre),
-                    subtitle: Text('Precio: \$${p.precio} - Stock: ${p.stock}'),
-                    trailing: IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        final nuevoStockController = TextEditingController(text: p.stock.toString());
-                        showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            title: Text('Actualizar Stock'),
-                            content: TextField(
-                              controller: nuevoStockController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(labelText: 'Nuevo stock'),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  final nuevoStock = int.tryParse(nuevoStockController.text) ?? p.stock;
-                                  _actualizarStock(index, nuevoStock);
-                                  Navigator.pop(context);
-                                },
-                                child: Text('Actualizar'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
+             Divider(height: 40),
+             Text(
+              "Buscar libro por título",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            Text(
-              'Valor total del inventario: \$${inventario.calcularValorTotal().toStringAsFixed(2)}',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            )
+            TextField(
+              controller: _buscarController,
+              decoration:  InputDecoration(labelText: 'Título a buscar'),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: buscarLibro,
+                  child:  Text('Buscar'),
+                ),
+                ElevatedButton(
+                  onPressed: limpiarBusqueda,
+                  child:  Text('Limpiar'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey),
+                ),
+              ],
+            ),
+             SizedBox(height: 20),
+             Text(
+              "Libros en la biblioteca",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              itemCount: listaParaMostrar.length,
+              itemBuilder: (context, index) {
+                final libro = listaParaMostrar[index];
+                return ListTile(
+                  title: Text(libro.titulo),
+                  subtitle: Text(
+                      'Autor: ${libro.autor} - Año: ${libro.anioPublicacion} - Cantidad: ${libro.cantidadDisponible}'),
+                );
+              },
+            ),
           ],
         ),
       ),

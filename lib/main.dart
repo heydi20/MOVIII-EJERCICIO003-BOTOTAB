@@ -26,7 +26,7 @@ class Cuerpo extends StatefulWidget {
 
 class _CuerpoState extends State<Cuerpo> {
   int indice=0;
-  List<Widget> paginas=[InventarioScreen(),MateriaScreen()];
+  List<Widget> paginas=[BibliotecaScreen(),MateriaScreen()];
 
   @override
   Widget build(BuildContext context) {
